@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"time"
+	"io/ioutil"
+	"os"
 
 	"github.com/fsouza/go-dockerclient"
 	"github.com/gliderlabs/logspout/router"
@@ -127,12 +129,20 @@ func IsDecodeJsonLogs(c *docker.Container, a *LogstashAdapter) bool {
 	return decodeJsonLogs
 }
 
+func getopt(name, dfault string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		value = dfault
+	}
+	return value
+}
+
 func getHostname() string {
 	content, err := ioutil.ReadFile("/etc/host_hostname")
 	if err == nil && len(content) > 0 {
 		hostname = strings.TrimRight(string(content), "\r\n")
 	} else {
-		hostname = getopt("SYSLOG_HOSTNAME", "{{.Container.Config.Hostname}}")
+		hostname = getopt("DOCKERHOST_HOSTNAME", "{{.Container.Config.Hostname}}")
 	}
 	return hostname
 }
@@ -146,10 +156,8 @@ func (a *LogstashAdapter) Stream(logstream chan *router.Message) {
 			Name:     m.Container.Name,
 			ID:       m.Container.ID,
 			Image:    m.Container.Config.Image,
-			Hostname: m.Container.Config.Hostname,
+			Hostname: getHostname,
 		}
-
-		hostname = getHostname()
 
 		if os.Getenv("DOCKER_LABELS") != "" {
 			dockerInfo.Labels = make(map[string]string)
