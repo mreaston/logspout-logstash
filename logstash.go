@@ -127,6 +127,16 @@ func IsDecodeJsonLogs(c *docker.Container, a *LogstashAdapter) bool {
 	return decodeJsonLogs
 }
 
+func getHostname() string {
+	content, err := ioutil.ReadFile("/etc/host_hostname")
+	if err == nil && len(content) > 0 {
+		hostname = strings.TrimRight(string(content), "\r\n")
+	} else {
+		hostname = getopt("SYSLOG_HOSTNAME", "{{.Container.Config.Hostname}}")
+	}
+	return hostname
+}
+
 // Stream implements the router.LogAdapter interface.
 func (a *LogstashAdapter) Stream(logstream chan *router.Message) {
 
@@ -138,6 +148,8 @@ func (a *LogstashAdapter) Stream(logstream chan *router.Message) {
 			Image:    m.Container.Config.Image,
 			Hostname: m.Container.Config.Hostname,
 		}
+
+		hostname = getHostname()
 
 		if os.Getenv("DOCKER_LABELS") != "" {
 			dockerInfo.Labels = make(map[string]string)
@@ -170,6 +182,7 @@ func (a *LogstashAdapter) Stream(logstream chan *router.Message) {
 		data["docker"] = dockerInfo
 		data["stream"] = m.Source
 		data["tags"] = tags
+		data["hostname"] = hostname
 
 		// Return the JSON encoding
 		if js, err = json.Marshal(data); err != nil {
