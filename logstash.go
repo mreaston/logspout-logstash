@@ -9,13 +9,17 @@ import (
 	"strings"
 	"time"
 	"io/ioutil"
-	"os"
 
 	"github.com/fsouza/go-dockerclient"
 	"github.com/gliderlabs/logspout/router"
 )
 
+var(
+	hostname string
+)
+
 func init() {
+	hostname, _ = os.Hostname()
 	router.AdapterFactories.Register(NewLogstashAdapter, "logstash")
 }
 
@@ -156,7 +160,7 @@ func (a *LogstashAdapter) Stream(logstream chan *router.Message) {
 			Name:     m.Container.Name,
 			ID:       m.Container.ID,
 			Image:    m.Container.Config.Image,
-			Hostname: getHostname,
+			Hostname: getHostname(),
 		}
 
 		if os.Getenv("DOCKER_LABELS") != "" {
